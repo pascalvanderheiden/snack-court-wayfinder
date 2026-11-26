@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snack Court · Visual prototype</title>
+  <style>
+    /* Three throwaway voting-page variants, switchable with ?variant=A, B, or C. */
+    :root { font-family: ui-rounded, "Avenir Next", system-ui, sans-serif; color: #172941; background: #f7eedc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding-bottom: 6rem; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #2274b8; outline-offset: 3px; }
+    button:disabled { cursor: default; }
+    .demo { padding: .5rem 1rem; text-align: center; background: #162a40; color: white; font-size: .75rem; letter-spacing: .03em; }
+    .wrap { max-width: 1080px; margin: auto; padding: 2rem 1.5rem; }
+    .mast { display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-weight: 900; letter-spacing: -.04em; font-size: 1.35rem; }
+    .mast small { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
+    h1, h2, p { margin: 0; }
+    .eyebrow { font-size: .72rem; text-transform: uppercase; font-weight: 800; letter-spacing: .15em; }
+    .subtle { color: #526379; }
+    .switcher { position: fixed; z-index: 10; bottom: 1rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: .75rem; padding: .35rem; border-radius: 999px; background: #172941; color: white; box-shadow: 0 4px 20px #0003; white-space: nowrap; }
+    .switcher button { background: white; color: #172941; border: 0; border-radius: 50%; width: 2.4rem; height: 2.4rem; font-size: 1.25rem; }
+    .switcher span { font-size: .8rem; font-weight: 800; min-width: 10rem; text-align: center; }
+    .reset { border: 0; background: transparent; padding: .5rem 0; color: inherit; text-decoration: underline; font-size: .8rem; }
+    .status { min-height: 1.5rem; font-size: .9rem; font-weight: 700; }
+    .snack-icon { display: inline-grid; place-items: center; font-size: clamp(3rem, 8vw, 5rem); line-height: 1; }
+    .chip { display: inline-block; border: 1px solid currentColor; border-radius: 99px; padding: .3rem .6rem; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .vote-button { border: 0; padding: .85rem 1.1rem; font-weight: 800; border-radius: .4rem; }
+    .vote-button:disabled { opacity: .8; }
+
+    .stand { background: #f8eed9; min-height: calc(100vh - 2rem); }
+    .stand .mast { color: #18395b; border-bottom: 2px solid #18395b; padding-bottom: 1rem; }
+    .stand .hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 1rem; padding: 3rem 0 2rem; }
+    .stand h1 { font-size: clamp(3rem, 7vw, 5.5rem); letter-spacing: -.07em; line-height: .95; max-width: 11ch; }
+    .stand .hero p { margin-top: 1rem; max-width: 32rem; font-size: 1.1rem; }
+    .stamp { background: #ffcd52; color: #18395b; border: 2px solid #18395b; border-radius: 50%; display: grid; place-items: center; width: 7rem; height: 7rem; text-align: center; font-weight: 900; font-size: .8rem; transform: rotate(12deg); }
+    .stand .snacks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .stand .snack { border: 2px solid #18395b; background: #fffaf0; padding: 1.3rem; display: flex; flex-direction: column; min-height: 18rem; }
+    .stand .snack:nth-child(2) { background: #f9c5ac; }
+    .stand .snack:nth-child(3) { background: #c9e6d6; }
+    .stand .snack-icon { height: 7rem; }
+    .stand .snack h2 { font-size: 1.4rem; letter-spacing: -.04em; }
+    .stand .snack p { margin: .25rem 0 1rem; }
+    .stand .vote-button { margin-top: auto; background: #18395b; color: white; }
+    .stand .bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; padding-top: 1.25rem; }
+
+    .scoreboard { background: #163d30; color: #f6f1dc; min-height: calc(100vh - 2rem); }
+    .scoreboard .mast { padding-bottom: 1.2rem; border-bottom: 1px solid #98b3a5; }
+    .scoreboard .hero { display: flex; justify-content: space-between; gap: 2rem; align-items: end; margin: 3rem 0; }
+    .scoreboard h1 { font-size: clamp(3rem, 6vw, 5rem); letter-spacing: -.06em; line-height: 1; }
+    .scoreboard .hero p { max-width: 20rem; color: #d3e2d5; }
+    .board { border-top: 2px solid #e8dfb9; }
+    .board-row { display: grid; grid-template-columns: 4rem 1fr 8rem auto; align-items: center; gap: 1rem; border-bottom: 1px solid #8cab98; padding: 1.1rem 0; }
+    .board-row .snack-icon { font-size: 2.7rem; }
+    .board-row h2 { font-size: clamp(1.2rem, 3vw, 2rem); }
+    .board-row .count { font-size: 2rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .board-row .count small { display: block; font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+    .scoreboard .vote-button { color: #12392e; background: #f4d45e; min-width: 6rem; }
+    .scoreboard .bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-top: 1.5rem; }
+
+    .ballot { background: #e7d6bf; color: #3a2726; min-height: calc(100vh - 2rem); }
+    .ballot .mast { color: #5b3230; }
+    .ballot .paper { background: #fffaf0; max-width: 690px; margin: 2.5rem auto; padding: clamp(1.5rem, 5vw, 3rem); border: 1px solid #bfaa97; box-shadow: 8px 8px 0 #cbb39c; }
+    .ballot .paper-head { text-align: center; border-bottom: 1px solid #c9b6a7; padding-bottom: 1.5rem; }
+    .ballot h1 { font-family: Georgia, serif; font-size: clamp(2.4rem, 6vw, 4rem); line-height: 1; letter-spacing: -.05em; margin: .5rem 0; }
+    .ballot fieldset { border: 0; margin: 0; padding: 1rem 0; }
+    .ballot legend { font-weight: 700; padding-top: 1.3rem; }
+    .ballot label { display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid #e1d4c7; padding: 1rem .25rem; cursor: pointer; }
+    .ballot input { width: 1.3rem; height: 1.3rem; accent-color: #9c4337; flex: none; }
+    .ballot label .snack-icon { font-size: 2rem; }
+    .ballot label strong { flex: 1; }
+    .ballot .vote-button { width: 100%; background: #9c4337; color: white; }
+    .ballot .bottom { margin-top: 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
+    .ballot .status { margin-top: 1rem; }
+
+    @media (max-width: 680px) {
+      .wrap { padding: 1.25rem 1rem; }
+      .stand .hero { grid-template-columns: 1fr; padding: 2rem 0 1.5rem; }
+      .stamp { width: 5rem; height: 5rem; font-size: .65rem; }
+      .stand .snacks { grid-template-columns: 1fr; }
+      .stand .snack { min-height: 0; display: grid; grid-template-columns: 4.5rem 1fr; gap: .5rem 1rem; }
+      .stand .snack-icon { height: auto; grid-row: span 2; font-size: 3rem; }
+      .stand .snack p { margin: 0; }
+      .stand .vote-button { grid-column: 2; }
+      .scoreboard .hero { display: block; margin: 2rem 0; }
+      .scoreboard .hero p { margin-top: 1rem; }
+      .board-row { grid-template-columns: 3rem 1fr auto; gap: .5rem; }
+      .board-row .count { font-size: 1.5rem; }
+      .board-row .vote-button { grid-column: 2 / 4; width: 100%; }
+      .switcher span { min-width: 8rem; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .stand .snack:hover { transform: translateY(-3px); transition: transform .18s ease; }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo">VISUAL PROTOTYPE · votes are simulated, and reset when this page reloads</div>
+  <main id="app"></main>
+  <nav class="switcher" aria-label="Prototype visual direction">
+    <button id="previous" type="button" aria-label="Previous visual direction">←</button>
+    <span id="variant-label"></span>
+    <button id="next" type="button" aria-label="Next visual direction">→</button>
+  </nav>
+  <script>
+    const options = [
+      { name: 'Potato chips', icon: '🥔' },
+      { name: 'Popcorn', icon: '🍿' },
+      { name: 'Pretzels', icon: '🥨' }
+    ];
+    const variants = [
+      { key: 'A', label: 'Snack stand', render: renderStand },
+      { key: 'B', label: 'Scoreboard', render: renderScoreboard },
+      { key: 'C', label: 'Paper ballot', render: renderBallot }
+    ];
+    let selected = null;
+    let choice = null;
+    let message = '';
+    const requested = new URLSearchParams(location.search).get('variant');
+    let variant = Math.max(0, variants.findIndex(item => item.key === requested));
+    const app = document.getElementById('app');
+    const label = document.getElementById('variant-label');
+    const total = index => choice === index ? 1 : 0;
+    const voteText = index => choice === index ? 'Your pick ✓' : choice === null ? 'Vote for this' : 'Vote closed';
+    const summary = () => choice === null ? 'Your browser has not voted yet.' : `Your browser voted for ${options[choice].name}.`;
+    const top = () => '<header class="mast"><span>✦ snack court</span><small>One browser · one vote</small></header>';
+    const reset = () => '<button class="reset" type="button" data-reset>Reset demo</button>';
+    const status = () => `<p class="status" role="status">${message || summary()}</p>`;
+
+    function renderStand() {
+      return `<div class="stand"><div class="wrap">${top()}
+        <div class="hero"><div><div class="eyebrow">The snack stand is open</div><h1>Pick your snack champion.</h1><p>Three contenders. One delicious decision. Choose your favorite and see the score right away.</p></div><div class="stamp">ONE PICK<br>BIG ENERGY ✦</div></div>
+        <div class="snacks">${options.map((item, index) => `<article class="snack"><span class="snack-icon" aria-hidden="true">${item.icon}</span><div><h2>${item.name}</h2><p>${total(index)} ${total(index) === 1 ? 'vote' : 'votes'} in this browser</p></div><button class="vote-button" type="button" data-vote="${index}" ${choice !== null ? 'disabled' : ''}>${voteText(index)}</button></article>`).join('')}</div>
+        <div class="bottom"><div>${status()}<p class="subtle">These totals are local to this browser, not a shared leaderboard.</p></div>${reset()}</div>
+      </div></div>`;
+    }
+    function renderScoreboard() {
+      return `<div class="scoreboard"><div class="wrap">${top()}
+        <div class="hero"><div><div class="eyebrow">The local snack league</div><h1>The scoreboard.</h1></div><p>Make your pick and watch your browser’s score change. This is your local board, not a global tally.</p></div>
+        <div class="board">${options.map((item, index) => `<article class="board-row"><span class="snack-icon" aria-hidden="true">${item.icon}</span><h2>${item.name}</h2><div class="count">${total(index)}<small>${total(index) === 1 ? 'local vote' : 'local votes'}</small></div><button class="vote-button" type="button" data-vote="${index}" ${choice !== null ? 'disabled' : ''}>${choice === index ? 'Your pick ✓' : choice === null ? 'Pick' : 'Closed'}</button></article>`).join('')}</div>
+        <div class="bottom"><div>${status()}<p>One saved choice per browser storage area.</p></div>${reset()}</div>
+      </div></div>`;
+    }
+    function renderBallot() {
+      return `<div class="ballot"><div class="wrap">${top()}<article class="paper">
+        <header class="paper-head"><div class="eyebrow">Officially unofficial · snack court</div><h1>A little ballot<br>for a big craving.</h1><p>Select one favorite, then cast your vote.</p></header>
+        <form id="ballot-form"><fieldset ${choice !== null ? 'disabled' : ''}><legend>Choose your snack</legend>
+          ${options.map((item, index) => `<label><input type="radio" name="snack" value="${index}" ${selected === index ? 'checked' : ''}><span class="snack-icon" aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><span>${total(index)} ${total(index) === 1 ? 'vote' : 'votes'}</span></label>`).join('')}
+        </fieldset><button class="vote-button" type="submit" ${choice !== null || selected === null ? 'disabled' : ''}>${choice === null ? 'Cast my vote' : 'Vote recorded ✓'}</button></form>
+        ${status()}<div class="bottom"><p class="subtle">Totals stay in this browser only.</p>${reset()}</div>
+      </article></div></div>`;
+    }
+    function render() {
+      app.innerHTML = variants[variant].render();
+      label.textContent = `${variants[variant].key} · ${variants[variant].label}`;
+    }
+    function cast(index) {
+      if (choice !== null || !Number.isInteger(index) || index < 0 || index >= options.length) return;
+      choice = index;
+      selected = index;
+      message = `Nice pick! Your vote for ${options[index].name} is recorded in this demo.`;
+      render();
+    }
+    function changeVariant(delta) {
+      variant = (variant + delta + variants.length) % variants.length;
+      const url = new URL(location.href);
+      url.searchParams.set('variant', variants[variant].key);
+      history.replaceState(null, '', url);
+      render();
+    }
+    app.addEventListener('click', event => {
+      const vote = event.target.closest('[data-vote]');
+      if (vote) cast(Number(vote.dataset.vote));
+      if (event.target.closest('[data-reset]')) {
+        choice = null;
+        selected = null;
+        message = 'Demo reset. Pick a snack to start again.';
+        render();
+      }
+    });
+    app.addEventListener('change', event => {
+      if (event.target.name === 'snack') {
+        selected = Number(event.target.value);
+        const submit = document.querySelector('#ballot-form button[type=submit]');
+        submit.disabled = false;
+      }
+    });
+    app.addEventListener('submit', event => {
+      event.preventDefault();
+      cast(selected);
+    });
+    document.getElementById('previous').addEventListener('click', () => changeVariant(-1));
+    document.getElementById('next').addEventListener('click', () => changeVariant(1));
+    document.addEventListener('keydown', event => {
+      if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        changeVariant(event.key === 'ArrowLeft' ? -1 : 1);
+      }
+    });
+    render();
+  </script>
+</body>
+</html>

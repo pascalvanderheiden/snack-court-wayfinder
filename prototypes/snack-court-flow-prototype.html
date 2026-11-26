@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snack Court: voting flow prototype</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #233039; background: #f3f5f2; line-height: 1.5; }
+    body { max-width: 1050px; margin: auto; padding: 2rem 1rem 4rem; }
+    h1, h2, p { margin-top: 0; }
+    h1 { font-size: 2rem; margin-bottom: .3rem; }
+    h2 { font-size: 1.3rem; }
+    .badge { color: #12645c; font-weight: 700; text-transform: uppercase; font-size: .75rem; letter-spacing: .08em; }
+    .intro, section { background: white; border: 1px solid #d5ded9; border-radius: 12px; padding: 1.3rem; margin-bottom: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .8rem; }
+    .card { background: #f4f8f6; border-radius: 8px; padding: 1rem; }
+    .card p { margin-bottom: .3rem; }
+    .buttons { display: flex; flex-wrap: wrap; gap: .5rem; margin: .6rem 0 1rem; }
+    button { font: inherit; border: 1px solid #aebdb6; background: white; color: #233039; border-radius: 6px; padding: .5rem .75rem; cursor: pointer; }
+    button:hover, button:focus-visible { border-color: #12645c; outline-color: #12645c; }
+    button.active, button.primary { color: white; background: #12645c; border-color: #12645c; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    #message { border: 1px solid #cee5d9; border-radius: 6px; padding: .6rem .8rem; background: #edf7f3; }
+    .muted { color: #52635b; }
+    .scenario { border-top: 1px solid #d5ded9; padding-top: 1rem; }
+    .scenario p { margin-bottom: .6rem; }
+    .small { font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <header class="intro">
+    <div class="badge">Throwaway prototype · not the app</div>
+    <h1>Snack Court: try the voting flow</h1>
+    <p>Does this flow feel right when someone votes, returns, opens another tab, or cannot save their vote?</p>
+    <p class="muted small">Everything below is simulated in memory. “Saved,” reloads, tabs and failures are demonstrations—not real localStorage. Browser reload resets the demo. Totals belong to this browser’s storage area, not everyone voting.</p>
+  </header>
+
+  <section aria-labelledby="state-heading">
+    <h2 id="state-heading">What is happening</h2>
+    <div id="state" class="grid"></div>
+    <p id="message" role="status" aria-live="polite"></p>
+  </section>
+
+  <section aria-labelledby="play-heading">
+    <h2 id="play-heading">Try it yourself</h2>
+    <p class="small muted">Choose a simulated tab, then try a vote or a browser event. Updates to the other tab are delivered separately to show the delay.</p>
+    <div class="buttons" id="tabs"></div>
+    <div class="buttons" id="votes"></div>
+    <div class="buttons" id="events"></div>
+  </section>
+
+  <section aria-labelledby="guided-heading">
+    <h2 id="guided-heading">Guided walkthroughs</h2>
+    <p class="small muted">Starting a walkthrough resets the demonstration. Each step performs the action shown.</p>
+    <div class="buttons" id="scenarios" role="group" aria-label="Choose a walkthrough"></div>
+    <div class="scenario" id="walkthrough"></div>
+  </section>
+
+  <script>
+    const snacks = ['Potato chips', 'Popcorn', 'Pretzels'];
+    const emptyRecord = () => ({ choice: null, totals: [0, 0, 0] });
+    const copyRecord = record => ({ choice: record.choice, totals: [...record.totals] });
+    const initialState = () => ({
+      stored: emptyRecord(),
+      tabs: [emptyRecord(), emptyRecord()],
+      active: 0,
+      available: true,
+      message: 'No vote has been saved in this simulated browser.'
+    });
+
+    function transition(state, action) {
+      const next = {
+        ...state,
+        stored: state.stored && copyRecord(state.stored),
+        tabs: state.tabs.map(tab => tab && copyRecord(tab))
+      };
+      const tab = next.active;
+      if (action.type === 'reset') return initialState();
+      if (action.type === 'tab') {
+        next.active = action.tab;
+        next.message = `Viewing tab ${action.tab + 1}. Its display may be waiting for an update.`;
+      } else if (action.type === 'availability') {
+        next.available = action.available;
+        next.message = action.available ? 'Saving is available again.' : 'Saving is now blocked in the simulation.';
+      } else if (action.type === 'vote') {
+        if (!next.available) {
+          next.message = 'Vote not saved: browser storage is unavailable. Try again when saving works.';
+        } else if (!next.stored) {
+          next.message = 'Vote not saved: stored data is unreadable. The app needs a recovery choice.';
+        } else if (next.stored.choice !== null) {
+          next.tabs[tab] = copyRecord(next.stored);
+          next.message = 'A vote is already saved in this browser; another vote was not added.';
+        } else {
+          next.stored.choice = action.snack;
+          next.stored.totals[action.snack] += 1;
+          next.tabs[tab] = copyRecord(next.stored);
+          next.message = `Vote saved for ${snacks[action.snack]}. The total updated in this tab.`;
+        }
+      } else if (action.type === 'refresh') {
+        next.tabs[tab] = next.available && next.stored ? copyRecord(next.stored) : null;
+        next.message = next.tabs[tab] ? `Tab ${tab + 1} read the saved state again.` : `Tab ${tab + 1} cannot read a valid saved state.`;
+      } else if (action.type === 'deliver') {
+        next.tabs[1 - tab] = next.available && next.stored ? copyRecord(next.stored) : null;
+        next.message = `The simulated change reached tab ${2 - tab}.`;
+      } else if (action.type === 'corrupt') {
+        next.stored = null;
+        next.message = 'Saved data is now simulated as unreadable. Existing tab displays have not refreshed.';
+      } else if (action.type === 'clear') {
+        next.stored = emptyRecord();
+        next.message = 'Simulated browser data cleared. Existing tab displays have not refreshed.';
+      } else if (action.type === 'race') {
+        if (!next.available || !next.stored || next.stored.choice !== null) {
+          next.message = 'Start with accessible, empty storage to simulate competing votes.';
+        } else {
+          next.tabs[0] = { choice: 0, totals: [1, 0, 0] };
+          next.tabs[1] = { choice: 1, totals: [0, 1, 0] };
+          next.stored = copyRecord(next.tabs[1]);
+          next.message = 'Simulated race: both tabs reported a vote, but the last write replaced the first. A storage event alone cannot prevent this.';
+        }
+      }
+      return next;
+    }
+  </script>
+  <script>
+    let state = initialState();
+    let currentScenario = 0;
+    let step = 0;
+    const scenarios = [
+      {
+        title: 'Vote and return',
+        description: 'A successful vote updates immediately; a simulated reload reads the saved choice.',
+        steps: [
+          ['Vote for Popcorn', { type: 'vote', snack: 1 }],
+          ['Reload this tab', { type: 'refresh' }],
+          ['Try voting for Pretzels again', { type: 'vote', snack: 2 }]
+        ]
+      },
+      {
+        title: 'Another tab',
+        description: 'See the delay before another tab receives the saved state.',
+        steps: [
+          ['Vote for Potato chips in tab 1', { type: 'vote', snack: 0 }],
+          ['Deliver the update to tab 2', { type: 'deliver' }],
+          ['View tab 2', { type: 'tab', tab: 1 }],
+          ['Try voting in tab 2', { type: 'vote', snack: 2 }]
+        ]
+      },
+      {
+        title: 'Saving fails',
+        description: 'A vote should not look saved if browser storage is unavailable.',
+        steps: [
+          ['Block saving', { type: 'availability', available: false }],
+          ['Try voting for Pretzels', { type: 'vote', snack: 2 }],
+          ['Restore saving', { type: 'availability', available: true }],
+          ['Try the vote again', { type: 'vote', snack: 2 }]
+        ]
+      },
+      {
+        title: 'Conflicting tabs',
+        description: 'A deliberately simulated race illustrates why simultaneous votes need a separate coordination decision.',
+        steps: [
+          ['Simulate simultaneous votes', { type: 'race' }],
+          ['Refresh tab 1 from saved data', { type: 'refresh' }],
+          ['Deliver the update to tab 2', { type: 'deliver' }]
+        ]
+      },
+      {
+        title: 'Unreadable data',
+        description: 'Review what happens if saved information cannot be read; recovery remains undecided.',
+        steps: [
+          ['Vote for Popcorn', { type: 'vote', snack: 1 }],
+          ['Make saved data unreadable', { type: 'corrupt' }],
+          ['Reload this tab', { type: 'refresh' }],
+          ['Try to vote', { type: 'vote', snack: 0 }]
+        ]
+      }
+    ];
+
+    const element = id => document.getElementById(id);
+    function card(title, record) {
+      if (!record) return `<div class="card"><strong>${title}</strong><p>Saved data unavailable or unreadable.</p></div>`;
+      return `<div class="card"><strong>${title}</strong><p>Choice: ${record.choice === null ? 'No vote' : snacks[record.choice]}</p>${snacks.map((name, i) => `<p>${name}: ${record.totals[i]}</p>`).join('')}</div>`;
+    }
+    function button(label, action, active = false) {
+      const node = document.createElement('button');
+      node.textContent = label;
+      if (active) node.className = 'active';
+      node.addEventListener('click', () => dispatch(action));
+      return node;
+    }
+    function dispatch(action) {
+      state = transition(state, action);
+      render();
+    }
+    function render() {
+      element('state').innerHTML = card('Simulated saved data', state.stored) +
+        card('Tab 1 display', state.tabs[0]) + card('Tab 2 display', state.tabs[1]) +
+        `<div class="card"><strong>Conditions</strong><p>Viewing: tab ${state.active + 1}</p><p>Saving: ${state.available ? 'available' : 'blocked'}</p><p>Totals: this storage area only</p></div>`;
+      element('message').textContent = state.message;
+      element('tabs').replaceChildren(...[0, 1].map(tab => button(`View tab ${tab + 1}`, { type: 'tab', tab }, state.active === tab)));
+      element('votes').replaceChildren(...snacks.map((name, snack) => button(`Vote: ${name}`, { type: 'vote', snack })));
+      element('events').replaceChildren(
+        button('Simulate reload', { type: 'refresh' }),
+        button('Deliver update to other tab', { type: 'deliver' }),
+        button(state.available ? 'Block saving' : 'Restore saving', { type: 'availability', available: !state.available }),
+        button('Make data unreadable', { type: 'corrupt' }),
+        button('Clear saved data', { type: 'clear' }),
+        button('Simulate simultaneous votes', { type: 'race' }),
+        button('Reset demo', { type: 'reset' })
+      );
+      element('scenarios').replaceChildren(...scenarios.map((scenario, i) => {
+        const node = document.createElement('button');
+        node.textContent = scenario.title;
+        if (i === currentScenario) node.className = 'active';
+        node.addEventListener('click', () => { currentScenario = i; step = 0; state = initialState(); render(); });
+        return node;
+      }));
+      const scenario = scenarios[currentScenario];
+      const panel = element('walkthrough');
+      panel.replaceChildren();
+      const description = document.createElement('p');
+      description.textContent = scenario.description;
+      panel.append(description);
+      if (step < scenario.steps.length) {
+        const [label, action] = scenario.steps[step];
+        const next = document.createElement('button');
+        next.className = 'primary';
+        next.textContent = `Step ${step + 1} of ${scenario.steps.length}: ${label}`;
+        next.addEventListener('click', () => { state = transition(state, action); step += 1; render(); });
+        panel.append(next);
+      } else {
+        const done = document.createElement('p');
+        done.textContent = 'Walkthrough complete. Select it again to restart, or try the free-play controls.';
+        panel.append(done);
+      }
+    }
+    render();
+  </script>
+</body>
+</html>
