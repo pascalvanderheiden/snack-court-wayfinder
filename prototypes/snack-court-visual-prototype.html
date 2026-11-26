@@ -13,7 +13,11 @@
     button { cursor: pointer; }
     button:focus-visible, input:focus-visible { outline: 3px solid #2274b8; outline-offset: 3px; }
     button:disabled { cursor: default; }
-    .demo { padding: .5rem 1rem; text-align: center; background: #162a40; color: white; font-size: .75rem; letter-spacing: .03em; }
+    .demo { padding: .65rem 1rem; text-align: center; background: #162a40; color: white; font-size: .8rem; letter-spacing: .03em; }
+    .chooser { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem; padding: .75rem 1rem; background: #e4e9e7; color: #172941; }
+    .chooser strong { margin-right: .25rem; font-size: .85rem; }
+    .chooser button { border: 1px solid #53677b; background: white; color: #172941; border-radius: .35rem; padding: .5rem .75rem; font-weight: 700; }
+    .chooser button[aria-pressed="true"] { background: #172941; color: white; }
     .wrap { max-width: 1080px; margin: auto; padding: 2rem 1.5rem; }
     .mast { display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-weight: 900; letter-spacing: -.04em; font-size: 1.35rem; }
     .mast small { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
@@ -97,7 +101,14 @@
   </style>
 </head>
 <body>
-  <div class="demo">VISUAL PROTOTYPE · votes are simulated, and reset when this page reloads</div>
+  <div class="demo">PROTOTYPE · Try each design separately. Demo votes stay on this browser, not a shared leaderboard.</div>
+  <nav class="chooser" aria-label="Choose a prototype">
+    <strong>Try a design:</strong>
+    <button type="button" data-variant="0">A · Snack stand</button>
+    <button type="button" data-variant="1">B · Scoreboard</button>
+    <button type="button" data-variant="2">C · Paper ballot</button>
+  </nav>
+  <noscript><p>This interactive prototype needs JavaScript. Open the local preview URL in a browser with JavaScript enabled.</p></noscript>
   <main id="app"></main>
   <nav class="switcher" aria-label="Prototype visual direction">
     <button id="previous" type="button" aria-label="Previous visual direction">←</button>
@@ -118,65 +129,102 @@
     let selected = null;
     let choice = null;
     let message = '';
+    let storageError = '';
     const requested = new URLSearchParams(location.search).get('variant');
     let variant = Math.max(0, variants.findIndex(item => item.key === requested));
     const app = document.getElementById('app');
     const label = document.getElementById('variant-label');
+    const storageKey = () => `snack-court-demo-${variants[variant].key}`;
+    function loadChoice() {
+      try {
+        const saved = localStorage.getItem(storageKey());
+        if (saved === null) return null;
+        if (!['0', '1', '2'].includes(saved)) {
+          storageError = 'This demo cannot read its saved vote. Reset this demo to try again.';
+          return null;
+        }
+        return Number(saved);
+      } catch {
+        storageError = 'This demo cannot access browser storage. Voting is unavailable.';
+        return null;
+      }
+    }
     const total = index => choice === index ? 1 : 0;
     const voteText = index => choice === index ? 'Your pick ✓' : choice === null ? 'Vote for this' : 'Vote closed';
     const summary = () => choice === null ? 'Your browser has not voted yet.' : `Your browser voted for ${options[choice].name}.`;
-    const top = () => '<header class="mast"><span>✦ snack court</span><small>One browser · one vote</small></header>';
+    const masthead = () => '<header class="mast"><span>✦ snack court</span><small>One browser · one vote</small></header>';
     const reset = () => '<button class="reset" type="button" data-reset>Reset demo</button>';
-    const status = () => `<p class="status" role="status">${message || summary()}</p>`;
+    const status = () => `<p class="status" role="status">${storageError || message || summary()}</p>`;
 
     function renderStand() {
-      return `<div class="stand"><div class="wrap">${top()}
+      return `<div class="stand"><div class="wrap">${masthead()}
         <div class="hero"><div><div class="eyebrow">The snack stand is open</div><h1>Pick your snack champion.</h1><p>Three contenders. One delicious decision. Choose your favorite and see the score right away.</p></div><div class="stamp">ONE PICK<br>BIG ENERGY ✦</div></div>
-        <div class="snacks">${options.map((item, index) => `<article class="snack"><span class="snack-icon" aria-hidden="true">${item.icon}</span><div><h2>${item.name}</h2><p>${total(index)} ${total(index) === 1 ? 'vote' : 'votes'} in this browser</p></div><button class="vote-button" type="button" data-vote="${index}" ${choice !== null ? 'disabled' : ''}>${voteText(index)}</button></article>`).join('')}</div>
+        <div class="snacks">${options.map((item, index) => `<article class="snack"><span class="snack-icon" aria-hidden="true">${item.icon}</span><div><h2>${item.name}</h2><p>${total(index)} ${total(index) === 1 ? 'vote' : 'votes'} in this browser</p></div><button class="vote-button" type="button" data-vote="${index}" ${choice !== null || storageError ? 'disabled' : ''}>${voteText(index)}</button></article>`).join('')}</div>
         <div class="bottom"><div>${status()}<p class="subtle">These totals are local to this browser, not a shared leaderboard.</p></div>${reset()}</div>
       </div></div>`;
     }
     function renderScoreboard() {
-      return `<div class="scoreboard"><div class="wrap">${top()}
+      return `<div class="scoreboard"><div class="wrap">${masthead()}
         <div class="hero"><div><div class="eyebrow">The local snack league</div><h1>The scoreboard.</h1></div><p>Make your pick and watch your browser’s score change. This is your local board, not a global tally.</p></div>
-        <div class="board">${options.map((item, index) => `<article class="board-row"><span class="snack-icon" aria-hidden="true">${item.icon}</span><h2>${item.name}</h2><div class="count">${total(index)}<small>${total(index) === 1 ? 'local vote' : 'local votes'}</small></div><button class="vote-button" type="button" data-vote="${index}" ${choice !== null ? 'disabled' : ''}>${choice === index ? 'Your pick ✓' : choice === null ? 'Pick' : 'Closed'}</button></article>`).join('')}</div>
+        <div class="board">${options.map((item, index) => `<article class="board-row"><span class="snack-icon" aria-hidden="true">${item.icon}</span><h2>${item.name}</h2><div class="count">${total(index)}<small>${total(index) === 1 ? 'local vote' : 'local votes'}</small></div><button class="vote-button" type="button" data-vote="${index}" ${choice !== null || storageError ? 'disabled' : ''}>${choice === index ? 'Your pick ✓' : choice === null ? 'Pick' : 'Closed'}</button></article>`).join('')}</div>
         <div class="bottom"><div>${status()}<p>One saved choice per browser storage area.</p></div>${reset()}</div>
       </div></div>`;
     }
     function renderBallot() {
-      return `<div class="ballot"><div class="wrap">${top()}<article class="paper">
+      return `<div class="ballot"><div class="wrap">${masthead()}<article class="paper">
         <header class="paper-head"><div class="eyebrow">Officially unofficial · snack court</div><h1>A little ballot<br>for a big craving.</h1><p>Select one favorite, then cast your vote.</p></header>
-        <form id="ballot-form"><fieldset ${choice !== null ? 'disabled' : ''}><legend>Choose your snack</legend>
+        <form id="ballot-form"><fieldset ${choice !== null || storageError ? 'disabled' : ''}><legend>Choose your snack</legend>
           ${options.map((item, index) => `<label><input type="radio" name="snack" value="${index}" ${selected === index ? 'checked' : ''}><span class="snack-icon" aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><span>${total(index)} ${total(index) === 1 ? 'vote' : 'votes'}</span></label>`).join('')}
-        </fieldset><button class="vote-button" type="submit" ${choice !== null || selected === null ? 'disabled' : ''}>${choice === null ? 'Cast my vote' : 'Vote recorded ✓'}</button></form>
+        </fieldset><button class="vote-button" type="submit" ${choice !== null || selected === null || storageError ? 'disabled' : ''}>${choice === null ? 'Cast my vote' : 'Vote recorded ✓'}</button></form>
         ${status()}<div class="bottom"><p class="subtle">Totals stay in this browser only.</p>${reset()}</div>
       </article></div></div>`;
     }
     function render() {
       app.innerHTML = variants[variant].render();
       label.textContent = `${variants[variant].key} · ${variants[variant].label}`;
+      document.querySelectorAll('[data-variant]').forEach((button, index) => button.setAttribute('aria-pressed', String(index === variant)));
     }
     function cast(index) {
-      if (choice !== null || !Number.isInteger(index) || index < 0 || index >= options.length) return;
+      if (storageError || choice !== null || !Number.isInteger(index) || index < 0 || index >= options.length) return;
+      try {
+        localStorage.setItem(storageKey(), String(index));
+      } catch {
+        storageError = 'Your demo vote could not be saved. Check browser storage and try again.';
+        render();
+        return;
+      }
       choice = index;
       selected = index;
       message = `Nice pick! Your vote for ${options[index].name} is recorded in this demo.`;
       render();
     }
-    function changeVariant(delta) {
-      variant = (variant + delta + variants.length) % variants.length;
+    function selectVariant(index) {
+      variant = index;
+      storageError = '';
+      choice = loadChoice();
+      selected = choice;
+      message = '';
       const url = new URL(location.href);
       url.searchParams.set('variant', variants[variant].key);
       history.replaceState(null, '', url);
       render();
     }
+    function changeVariant(delta) {
+      selectVariant((variant + delta + variants.length) % variants.length);
+    }
     app.addEventListener('click', event => {
       const vote = event.target.closest('[data-vote]');
       if (vote) cast(Number(vote.dataset.vote));
       if (event.target.closest('[data-reset]')) {
-        choice = null;
-        selected = null;
-        message = 'Demo reset. Pick a snack to start again.';
+        try {
+          localStorage.removeItem(storageKey());
+          choice = null;
+          selected = null;
+          storageError = '';
+          message = 'Demo reset. Pick a snack to start again.';
+        } catch {
+          storageError = 'This demo could not reset browser storage.';
+        }
         render();
       }
     });
@@ -193,6 +241,7 @@
     });
     document.getElementById('previous').addEventListener('click', () => changeVariant(-1));
     document.getElementById('next').addEventListener('click', () => changeVariant(1));
+    document.querySelectorAll('[data-variant]').forEach(button => button.addEventListener('click', () => selectVariant(Number(button.dataset.variant))));
     document.addEventListener('keydown', event => {
       if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -200,6 +249,8 @@
         changeVariant(event.key === 'ArrowLeft' ? -1 : 1);
       }
     });
+    choice = loadChoice();
+    selected = choice;
     render();
   </script>
 </body>
