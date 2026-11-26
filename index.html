@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153d30">
+  <title>Snack Court · The scoreboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+  <script src="/tab-sync.js" defer></script>
+</head>
+<body>
+  <main class="court">
+    <header class="masthead">
+      <a class="brand" href="/">✦ snack court</a>
+      <span class="masthead-note">One browser · one vote</span>
+    </header>
+    <section aria-labelledby="title">
+      <div class="intro">
+        <div>
+          <p class="eyebrow">The local snack league</p>
+          <h1 id="title">The scoreboard.</h1>
+        </div>
+        <p class="intro-copy">Make your pick and watch your browser’s score change. This is your local board, not a global tally.</p>
+      </div>
+      <ul class="scoreboard" aria-label="Snack scoreboard">
+        <li class="snack" data-snack="chips">
+          <span class="snack-icon" aria-hidden="true">🥔</span>
+          <div class="snack-name">Potato chips <span class="chosen" hidden>Your pick</span></div>
+          <div class="score"><strong>0</strong><span>Local votes</span></div>
+          <button type="button" aria-label="Pick Potato chips" disabled>Pick</button>
+        </li>
+        <li class="snack" data-snack="popcorn">
+          <span class="snack-icon" aria-hidden="true">🍿</span>
+          <div class="snack-name">Popcorn <span class="chosen" hidden>Your pick</span></div>
+          <div class="score"><strong>0</strong><span>Local votes</span></div>
+          <button type="button" aria-label="Pick Popcorn" disabled>Pick</button>
+        </li>
+        <li class="snack" data-snack="pretzels">
+          <span class="snack-icon" aria-hidden="true">🥨</span>
+          <div class="snack-name">Pretzels <span class="chosen" hidden>Your pick</span></div>
+          <div class="score"><strong>0</strong><span>Local votes</span></div>
+          <button type="button" aria-label="Pick Pretzels" disabled>Pick</button>
+        </li>
+      </ul>
+      <div class="footnote">
+        <p role="status" aria-live="polite">Checking your browser’s scoreboard…</p>
+        <div class="recovery" aria-label="Scoreboard recovery">
+          <button type="button" id="retry" hidden>Retry</button>
+          <button type="button" id="reset" hidden>Reset unreadable scoreboard</button>
+        </div>
+        <p>One saved choice per browser storage area. Clearing browser data or changing profiles, browsers, or devices can reset or separate your vote.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
